@@ -12,7 +12,7 @@ public class DatabaseSingleton {
             try {
                 connection = DriverManager.getConnection(URL, USER, PASSWORD);
             } catch (SQLException e) {
-                throw new SQLException("Failed to create the database connection.", e);
+                throw new SQLException("Erreur de connection à la base de données.", e);
             }
         }
 

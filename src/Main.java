@@ -1,3 +1,11 @@
+import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -6,446 +14,580 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
 
-public class Main {
+public class Main extends Application {
     private static Magasin magasin = new Magasin();
     private static Map<Integer, Produit> productMap = new HashMap<>();
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        int choix;
-
-        do {
-            displayMenu();
-            choix = scanner.nextInt();
-            scanner.nextLine();
-            switch (choix) {
-                case 1:
-                    ajouterProduit(scanner);
-                    break;
-                case 2:
-                    supprimerProduit(scanner);
-                    break;
-                case 3:
-                    modifierProduit(scanner);
-                    break;
-                case 4:
-                    modifierQuantiteProduit(scanner);
-                    break;
-                case 5:
-                    rechercherProduitParNom(scanner);
-                    break;
-                case 6:
-                    listerProduitParLettre(scanner);
-                    break;
-                case 7:
-                    afficherNombreProduitEnStock();
-                    break;
-                case 8:
-                    afficherNombreProduitParType();
-                    break;
-                case 9:
-                    System.out.println("Au revoir !");
-                    break;
-                default:
-                    System.out.println("Choix invalide. Veuillez réessayer.");
-            }
-            System.out.println();
-        } while (choix != 9);
-
-        scanner.close();
+        launch(args);
     }
 
-    private static void displayMenu() {
-        System.out.println("Gestion des produits :");
-        System.out.println("1. Ajouter un produit");
-        System.out.println("2. Supprimer un produit");
-        System.out.println("3. Modifier un produit");
-        System.out.println("4. Modifier la quantité d'un produit");
-        System.out.println("5. Rechercher un produit par nom");
-        System.out.println("6. Lister les produits par lettre");
-        System.out.println("7. Afficher le nombre de produits en stock");
-        System.out.println("8. Afficher le nombre de produits par type");
-        System.out.println("9. Quitter");
-        System.out.print("Entrez votre choix : ");
+    @Override
+    public void start(Stage primaryStage) {
+        primaryStage.setTitle("Gestion des Produits");
+
+        Button addButton = new Button("Ajouter un produit");
+        Button deleteButton = new Button("Supprimer un produit");
+        Button updateButton = new Button("Modifier un produit");
+        Button updateQuantityButton = new Button("Modifier la quantité d'un produit");
+        Button searchButton = new Button("Rechercher un produit par nom");
+        Button listButton = new Button("Lister les produits par lettre");
+        Button stockButton = new Button("Afficher le nombre de produits en stock");
+        Button typeButton = new Button("Afficher le nombre de produits par type");
+        Button quitButton = new Button("Quitter");
+
+        VBox vbox = new VBox(10, addButton, deleteButton, updateButton, updateQuantityButton, searchButton, listButton, stockButton, typeButton, quitButton);
+        vbox.setPadding(new Insets(10));
+
+        addButton.setOnAction(e -> showAddProductDialog());
+        deleteButton.setOnAction(e -> showDeleteProductDialog());
+        updateButton.setOnAction(e -> showUpdateProductDialog());
+        updateQuantityButton.setOnAction(e -> showUpdateQuantityDialog());
+        searchButton.setOnAction(e -> showSearchProductDialog());
+        listButton.setOnAction(e -> showListProductDialog());
+        stockButton.setOnAction(e -> showStockCountDialog());
+        typeButton.setOnAction(e -> showTypeCountDialog());
+        quitButton.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Quitter");
+            alert.setHeaderText(null);
+            alert.setContentText("Au revoir");
+            alert.showAndWait();
+            primaryStage.close();
+        });
+
+
+        Scene scene = new Scene(vbox, 400, 350);
+        primaryStage.setScene(scene);
+        primaryStage.show();
     }
 
-    private static void ajouterProduit(Scanner scanner) {
-        System.out.print("Entrez le type de produit (Electronique/Alimentaire/Vestimentaire) : ");
-        String type = scanner.nextLine();
+    private void showAddProductDialog() {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Ajouter un produit");
 
-        switch (type.toLowerCase()) {
-            case "electronique":
-                addElectronicProduct(scanner);
-                break;
-            case "alimentaire":
-                addFoodProduct(scanner);
-                break;
-            case "vestimentaire":
-                addClothingProduct(scanner);
-                break;
-            default:
-                System.out.println("Type de produit invalide. Veuillez réessayer.");
-                break;
-        }
-    }
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
 
-    private static void addElectronicProduct(Scanner scanner) {
-        try (Connection connection = DatabaseConnection.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(
-                     "INSERT INTO produits_electroniques (id, nom, quantite, garantie, prix) VALUES (?, ?, ?, ?, ?)")) {
+        TextField idField = new TextField();
+        TextField nameField = new TextField();
+        TextField quantityField = new TextField();
+        TextField priceField = new TextField();
+        TextField additionalField = new TextField();
 
-            System.out.print("Entrez l'identifiant du produit : ");
-            int id = scanner.nextInt();
-            scanner.nextLine();
+        ComboBox<String> typeBox = new ComboBox<>();
+        typeBox.getItems().addAll("Electronique", "Alimentaire", "Vestimentaire");
+        typeBox.setValue("Electronique");
 
-            if (productMap.containsKey(id)) {
-                System.out.println("Ce produit existe déjà. Veuillez entrer un nouvel identifiant.");
-                return;
-            }
+        grid.add(new Label("Type:"), 0, 0);
+        grid.add(typeBox, 1, 0);
+        grid.add(new Label("ID:"), 0, 1);
+        grid.add(idField, 1, 1);
+        grid.add(new Label("Nom:"), 0, 2);
+        grid.add(nameField, 1, 2);
+        grid.add(new Label("Quantité:"), 0, 3);
+        grid.add(quantityField, 1, 3);
+        grid.add(new Label("Prix:"), 0, 4);
+        grid.add(priceField, 1, 4);
+        grid.add(new Label("Détails additionnels:"), 0, 5);
+        grid.add(additionalField, 1, 5);
 
-            System.out.print("Entrez le nom du produit : ");
-            String name = scanner.nextLine();
-            System.out.print("Entrez la quantité en stock : ");
-            int quantity = scanner.nextInt();
-            scanner.nextLine();
-            System.out.print("Entrez la garantie (en années) : ");
-            int garantie = scanner.nextInt();
-            System.out.print("Entrez le prix du produit : ");
-            double prix = scanner.nextDouble();
-            scanner.nextLine();
+        dialog.getDialogPane().setContent(grid);
+        ButtonType addButtonType = new ButtonType("Ajouter", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
 
-            preparedStatement.setInt(1, id);
-            preparedStatement.setString(2, name);
-            preparedStatement.setInt(3, quantity);
-            preparedStatement.setInt(4, garantie);
-            preparedStatement.setDouble(5, prix);
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == addButtonType) {
+                String type = typeBox.getValue();
+                int id = Integer.parseInt(idField.getText());
+                String name = nameField.getText();
+                int quantity = Integer.parseInt(quantityField.getText());
+                double price = Double.parseDouble(priceField.getText());
 
-            int rowsAffected = preparedStatement.executeUpdate();
-            if (rowsAffected > 0) {
-                Electronique product = new Electronique(id, name, quantity, garantie, prix);
-                magasin.addProduct(product);
-                System.out.println("Produit électronique ajouté avec succès.");
-            } else {
-                System.out.println("Erreur lors de l'ajout du produit électronique.");
-            }
+                try (Connection connection = DatabaseConnection.getConnection()) {
+                    PreparedStatement preparedStatement;
+                    if (type.equals("Electronique")) {
+                        preparedStatement = connection.prepareStatement(
+                                "INSERT INTO produits_electroniques (id, nom, quantite, garantie, prix) VALUES (?, ?, ?, ?, ?)");
+                        preparedStatement.setInt(4, Integer.parseInt(additionalField.getText())); // garantie
+                    } else if (type.equals("Alimentaire")) {
+                        preparedStatement = connection.prepareStatement(
+                                "INSERT INTO produits_alimentaires (id, nom, quantite, dateexpiration, prix) VALUES (?, ?, ?, ?, ?)");
+                        preparedStatement.setString(4, additionalField.getText()); // date d'expiration
+                    } else {
+                        preparedStatement = connection.prepareStatement(
+                                "INSERT INTO produits_vestimentaires (id, nom, quantite, taille, prix) VALUES (?, ?, ?, ?, ?)");
+                        preparedStatement.setString(4, additionalField.getText()); // taille
+                    }
+                    preparedStatement.setInt(1, id);
+                    preparedStatement.setString(2, name);
+                    preparedStatement.setInt(3, quantity);
+                    preparedStatement.setDouble(5, price);
 
-        } catch (SQLException e) {
-            System.out.println("Erreur SQL : " + e.getMessage());
-        }
-    }
-
-    private static void addFoodProduct(Scanner scanner) {
-        try (Connection connection = DatabaseConnection.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(
-                     "INSERT INTO produits_alimentaires (id, nom, quantite, dateexpiration, prix) VALUES (?, ?, ?, ?, ?)")) {
-
-            System.out.print("Entrez l'identifiant du produit : ");
-            int id = scanner.nextInt();
-            scanner.nextLine();
-
-            if (productMap.containsKey(id)) {
-                System.out.println("Ce produit existe déjà. Veuillez entrer un nouvel identifiant.");
-                return;
-            }
-
-            System.out.print("Entrez le nom du produit : ");
-            String name = scanner.nextLine();
-            System.out.print("Entrez la quantité en stock : ");
-            int quantity = scanner.nextInt();
-            scanner.nextLine();
-            System.out.print("Entrez la date d'Expiration : ");
-            String dateExpiration = scanner.nextLine();
-            System.out.print("Entrez le prix du produit : ");
-            double prix = scanner.nextDouble();
-            scanner.nextLine();
-
-            preparedStatement.setInt(1, id);
-            preparedStatement.setString(2, name);
-            preparedStatement.setInt(3, quantity);
-            preparedStatement.setString(4, dateExpiration);
-            preparedStatement.setDouble(5, prix);
-
-            int rowsAffected = preparedStatement.executeUpdate();
-            if (rowsAffected > 0) {
-                Alimentaire product = new Alimentaire(id, name, quantity, dateExpiration, prix);
-                magasin.addProduct(product);
-                System.out.println("Produit alimentaire ajouté avec succès.");
-            } else {
-                System.out.println("Erreur lors de l'ajout du produit alimentaire.");
-            }
-
-        } catch (SQLException e) {
-            System.out.println("Erreur SQL : " + e.getMessage());
-        }
-    }
-
-    private static void addClothingProduct(Scanner scanner) {
-        try (Connection connection = DatabaseConnection.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(
-                     "INSERT INTO produits_vestimentaires (id, nom, quantite, taille, prix) VALUES (?, ?, ?, ?, ?)")) {
-
-            System.out.print("Entrez l'identifiant du produit : ");
-            int id = scanner.nextInt();
-            scanner.nextLine();
-
-            if (productMap.containsKey(id)) {
-                System.out.println("Ce produit existe déjà. Veuillez entrer un nouvel identifiant.");
-                return;
-            }
-
-            System.out.print("Entrez le nom du produit : ");
-            String name = scanner.nextLine();
-            System.out.print("Entrez la quantité en stock : ");
-            int quantity = scanner.nextInt();
-            scanner.nextLine();
-            System.out.print("Entrez la taille de l'habit : ");
-            String taille = scanner.nextLine();
-            System.out.print("Entrez le prix du produit : ");
-            double prix = scanner.nextDouble();
-            scanner.nextLine();
-
-            preparedStatement.setInt(1, id);
-            preparedStatement.setString(2, name);
-            preparedStatement.setInt(3, quantity);
-            preparedStatement.setString(4, taille);
-            preparedStatement.setDouble(5, prix);
-
-            int rowsAffected = preparedStatement.executeUpdate();
-            if (rowsAffected > 0) {
-                Vestimentaire product = new Vestimentaire(id, name, quantity, taille, prix);
-                magasin.addProduct(product);
-                System.out.println("Produit vestimentaire ajouté avec succès.");
-            } else {
-                System.out.println("Erreur lors de l'ajout du produit vestimentaire.");
-            }
-
-        } catch (SQLException e) {
-            System.out.println("Erreur SQL : " + e.getMessage());
-        }
-    }
-
-    private static void supprimerProduit(Scanner scanner) {
-        System.out.print("Entrez l'identifiant du produit à supprimer : ");
-        int id = scanner.nextInt();
-        scanner.nextLine();
-
-        try (Connection connection = DatabaseConnection.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(
-                     "DELETE FROM produits WHERE id = ?")) {
-
-            preparedStatement.setInt(1, id);
-
-            int rowsAffected = preparedStatement.executeUpdate();
-            if (rowsAffected > 0) {
-                if (magasin.removeProduct(id)) {
-                    System.out.println("Produit supprimé avec succès.");
-                } else {
-                    System.out.println("Produit non trouvé dans la mémoire du programme, mais supprimé de la base de données.");
+                    int rowsAffected = preparedStatement.executeUpdate();
+                    if (rowsAffected > 0) {
+                        System.out.println("Produit ajouté avec succès.");
+                    } else {
+                        System.out.println("Erreur lors de l'ajout du produit.");
+                    }
+                } catch (SQLException e) {
+                    System.out.println("Erreur SQL : " + e.getMessage());
                 }
-            } else {
-                System.out.println("Produit non trouvé dans la base de données.");
+                return null;
             }
+            return null;
+        });
 
-        } catch (SQLException e) {
-            System.out.println("Erreur SQL : " + e.getMessage());
-        }
+        dialog.showAndWait();
     }
 
-    private static void modifierProduit(Scanner scanner) {
-        System.out.print("Entrez l'identifiant du produit à modifier : ");
-        int id = scanner.nextInt();
-        scanner.nextLine();
+    private void showDeleteProductDialog() {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Supprimer un produit");
 
-        Produit product = magasin.getProductById(id);
-        if (product != null) {
-            try (Connection connection = DatabaseConnection.getConnection();
-                 PreparedStatement preparedStatement = connection.prepareStatement(
-                         "UPDATE produits SET nom = ?, quantite = ?, prix = ? WHERE id = ?")) {
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
 
-                System.out.print("Entrez le nouveau nom du produit : ");
-                String newName = scanner.nextLine();
-                System.out.print("Entrez la nouvelle quantité en stock : ");
-                int newQuantity = scanner.nextInt();
-                scanner.nextLine();
-                System.out.print("Entrez le nouveau prix du produit : ");
-                double newPrix = scanner.nextDouble();
-                scanner.nextLine();
+        TextField idField = new TextField();
+        ComboBox<String> typeBox = new ComboBox<>();
+        typeBox.getItems().addAll("Electronique", "Alimentaire", "Vestimentaire");
+        typeBox.setValue("Electronique");
 
-                preparedStatement.setString(1, newName);
-                preparedStatement.setInt(2, newQuantity);
-                preparedStatement.setDouble(3, newPrix);
-                preparedStatement.setInt(4, id);
+        grid.add(new Label("Type:"), 0, 0);
+        grid.add(typeBox, 1, 0);
+        grid.add(new Label("ID:"), 0, 1);
+        grid.add(idField, 1, 1);
 
-                int rowsAffected = preparedStatement.executeUpdate();
-                if (rowsAffected > 0) {
-                    product.setName(newName);
-                    product.setQuantity(newQuantity);
-                    product.setPrix(newPrix);
-                    System.out.println("Produit mis à jour avec succès.");
-                } else {
-                    System.out.println("Erreur lors de la mise à jour du produit.");
+        dialog.getDialogPane().setContent(grid);
+        ButtonType deleteButtonType = new ButtonType("Supprimer", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(deleteButtonType, ButtonType.CANCEL);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == deleteButtonType) {
+                int id = Integer.parseInt(idField.getText());
+                String type = typeBox.getValue();
+                String tableName = "";
+
+                switch (type) {
+                    case "Electronique":
+                        tableName = "produits_electroniques";
+                        break;
+                    case "Alimentaire":
+                        tableName = "produits_alimentaires";
+                        break;
+                    case "Vestimentaire":
+                        tableName = "produits_vestimentaires";
+                        break;
                 }
 
-            } catch (SQLException e) {
-                System.out.println("Erreur SQL : " + e.getMessage());
+                try (Connection connection = DatabaseConnection.getConnection();
+                     PreparedStatement preparedStatement = connection.prepareStatement(
+                             "DELETE FROM " + tableName + " WHERE id = ?")) {
+
+                    preparedStatement.setInt(1, id);
+                    int rowsAffected = preparedStatement.executeUpdate();
+                    if (rowsAffected > 0) {
+                        if (magasin.removeProduct(id)) {
+                            System.out.println("Produit supprimé avec succès.");
+                        } else {
+                            System.out.println("Produit supprimée de la base de données.");
+                        }
+                    } else {
+                        System.out.println("Produit non trouvé dans la base de données.");
+                    }
+                } catch (SQLException e) {
+                    System.out.println("Erreur SQL : " + e.getMessage());
+                }
+                return null;
             }
-        } else {
-            System.out.println("Produit non trouvé.");
-        }
+            return null;
+        });
+
+        dialog.showAndWait();
     }
 
-    private static void modifierQuantiteProduit(Scanner scanner) {
-        System.out.print("Entrez l'identifiant du produit dont vous voulez modifier la quantité : ");
-        int id = scanner.nextInt();
-        scanner.nextLine();
 
-        Produit product = magasin.getProductById(id);
-        if (product != null) {
-            try (Connection connection = DatabaseConnection.getConnection();
-                 PreparedStatement preparedStatement = connection.prepareStatement(
-                         "UPDATE produits SET quantite = ? WHERE id = ?")) {
+    private void showUpdateProductDialog() {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Modifier un produit");
 
-                System.out.print("Entrez la nouvelle quantité en stock : ");
-                int newQuantity = scanner.nextInt();
-                scanner.nextLine();
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
 
-                preparedStatement.setInt(1, newQuantity);
-                preparedStatement.setInt(2, id);
+        TextField idField = new TextField();
+        TextField nameField = new TextField();
+        TextField quantityField = new TextField();
+        TextField priceField = new TextField();
+        ComboBox<String> typeBox = new ComboBox<>();
+        typeBox.getItems().addAll("Electronique", "Alimentaire", "Vestimentaire");
+        typeBox.setValue("Electronique");
 
-                int rowsAffected = preparedStatement.executeUpdate();
-                if (rowsAffected > 0) {
-                    product.setQuantity(newQuantity);
-                    System.out.println("Quantité du produit mise à jour avec succès.");
+        grid.add(new Label("Type:"), 0, 0);
+        grid.add(typeBox, 1, 0);
+        grid.add(new Label("ID:"), 0, 1);
+        grid.add(idField, 1, 1);
+        grid.add(new Label("Nouveau Nom:"), 0, 2);
+        grid.add(nameField, 1, 2);
+        grid.add(new Label("Nouvelle Quantité:"), 0, 3);
+        grid.add(quantityField, 1, 3);
+        grid.add(new Label("Nouveau Prix:"), 0, 4);
+        grid.add(priceField, 1, 4);
 
-                } else {
-                    System.out.println("Erreur lors de la mise à jour de la quantité du produit.");
+        dialog.getDialogPane().setContent(grid);
+        ButtonType updateButtonType = new ButtonType("Mettre à jour", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(updateButtonType, ButtonType.CANCEL);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == updateButtonType) {
+                int id = Integer.parseInt(idField.getText());
+                String newName = nameField.getText();
+                int newQuantity = Integer.parseInt(quantityField.getText());
+                double newPrice = Double.parseDouble(priceField.getText());
+                String type = typeBox.getValue();
+                String tableName = "";
+
+                switch (type) {
+                    case "Electronique":
+                        tableName = "produits_electroniques";
+                        break;
+                    case "Alimentaire":
+                        tableName = "produits_alimentaires";
+                        break;
+                    case "Vestimentaire":
+                        tableName = "produits_vestimentaires";
+                        break;
                 }
 
-            } catch (SQLException e) {
-                System.out.println("Erreur SQL : " + e.getMessage());
-            }
-        } else {
-            System.out.println("Produit non trouvé.");
-        }
-    }
+                try (Connection connection = DatabaseConnection.getConnection();
+                     PreparedStatement preparedStatement = connection.prepareStatement(
+                             "UPDATE " + tableName + " SET nom = ?, quantite = ?, prix = ? WHERE id = ?")) {
 
-    private static void rechercherProduitParNom(Scanner scanner) {
-        System.out.print("Entrez le nom du produit à rechercher : ");
-        String name = scanner.nextLine();
+                    preparedStatement.setString(1, newName);
+                    preparedStatement.setInt(2, newQuantity);
+                    preparedStatement.setDouble(3, newPrice);
+                    preparedStatement.setInt(4, id);
 
-        try (Connection connection = DatabaseConnection.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(
-                     "SELECT * FROM produits WHERE nom LIKE ?")) {
-
-            preparedStatement.setString(1, "%" + name + "%");
-            ResultSet resultSet = preparedStatement.executeQuery();
-
-            ArrayList<Produit> foundProducts = new ArrayList<>();
-            while (resultSet.next()) {
-                int id = resultSet.getInt("id");
-                String nom = resultSet.getString("nom");
-                int quantite = resultSet.getInt("quantite");
-                double prix = resultSet.getDouble("prix");
-
-                // Ajouter le produit à la liste des produits trouvés
-                Produit product = new Produit(id, nom, quantite, prix);
-                foundProducts.add(product);
-            }
-
-            if (foundProducts.isEmpty()) {
-                System.out.println("Aucun produit trouvé avec ce nom.");
-            } else {
-                for (Produit product : foundProducts) {
-                    System.out.println(product);
+                    int rowsAffected = preparedStatement.executeUpdate();
+                    if (rowsAffected > 0) {
+                        System.out.println("Produit mis à jour avec succès.");
+                    } else {
+                        System.out.println("Produit non trouvé.");
+                    }
+                } catch (SQLException e) {
+                    System.out.println("Erreur SQL : " + e.getMessage());
                 }
+                return null;
             }
+            return null;
+        });
 
-        } catch (SQLException e) {
-            System.out.println("Erreur SQL : " + e.getMessage());
-        }
+        dialog.showAndWait();
     }
 
-    private static void listerProduitParLettre(Scanner scanner) {
-        System.out.print("Entrez la lettre pour lister les produits : ");
-        char letter = scanner.nextLine().charAt(0);
 
-        try (Connection connection = DatabaseConnection.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(
-                     "SELECT * FROM produits WHERE nom LIKE ?")) {
+    private void showUpdateQuantityDialog() {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Modifier la quantité d'un produit");
 
-            preparedStatement.setString(1, letter + "%");
-            ResultSet resultSet = preparedStatement.executeQuery();
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
 
-            ArrayList<Produit> foundProducts = new ArrayList<>();
-            while (resultSet.next()) {
-                int id = resultSet.getInt("id");
-                String nom = resultSet.getString("nom");
-                int quantite = resultSet.getInt("quantite");
-                double prix = resultSet.getDouble("prix");
+        TextField idField = new TextField();
+        TextField quantityField = new TextField();
+        ComboBox<String> typeBox = new ComboBox<>();
+        typeBox.getItems().addAll("Electronique", "Alimentaire", "Vestimentaire");
+        typeBox.setValue("Electronique");
 
-                // Ajouter le produit à la liste des produits trouvés
-                Produit product = new Produit(id, nom, quantite, prix);
-                foundProducts.add(product);
-            }
+        grid.add(new Label("Type:"), 0, 0);
+        grid.add(typeBox, 1, 0);
+        grid.add(new Label("ID:"), 0, 1);
+        grid.add(idField, 1, 1);
+        grid.add(new Label("Nouvelle Quantité:"), 0, 2);
+        grid.add(quantityField, 1, 2);
 
-            if (foundProducts.isEmpty()) {
-                System.out.println("Aucun produit trouvé commençant par cette lettre.");
-            } else {
-                for (Produit product : foundProducts) {
-                    System.out.println(product);
+        dialog.getDialogPane().setContent(grid);
+        ButtonType updateButtonType = new ButtonType("Mettre à jour", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(updateButtonType, ButtonType.CANCEL);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == updateButtonType) {
+                int id = Integer.parseInt(idField.getText());
+                int newQuantity = Integer.parseInt(quantityField.getText());
+                String type = typeBox.getValue();
+                String tableName = "";
+
+                switch (type) {
+                    case "Electronique":
+                        tableName = "produits_electroniques";
+                        break;
+                    case "Alimentaire":
+                        tableName = "produits_alimentaires";
+                        break;
+                    case "Vestimentaire":
+                        tableName = "produits_vestimentaires";
+                        break;
                 }
-            }
 
-        } catch (SQLException e) {
-            System.out.println("Erreur SQL : " + e.getMessage());
-        }
+                try (Connection connection = DatabaseConnection.getConnection();
+                     PreparedStatement preparedStatement = connection.prepareStatement(
+                             "UPDATE " + tableName + " SET quantite = ? WHERE id = ?")) {
+
+                    preparedStatement.setInt(1, newQuantity);
+                    preparedStatement.setInt(2, id);
+
+                    int rowsAffected = preparedStatement.executeUpdate();
+                    if (rowsAffected > 0) {
+                        System.out.println("Quantité mise à jour avec succès.");
+                    } else {
+                        System.out.println("Produit non trouvé.");
+                    }
+                } catch (SQLException e) {
+                    System.out.println("Erreur SQL : " + e.getMessage());
+                }
+                return null;
+            }
+            return null;
+        });
+
+        dialog.showAndWait();
     }
 
-    private static void afficherNombreProduitEnStock() {
-        try (Connection connection = DatabaseConnection.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(
-                     "SELECT SUM(quantite) AS total FROM produits")) {
+    private void showSearchProductDialog() {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Rechercher un produit");
 
-            ResultSet resultSet = preparedStatement.executeQuery();
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
 
-            if (resultSet.next()) {
-                int total = resultSet.getInt("total");
-                System.out.println("Nombre de produits en stock : " + total);
+        TextField nameField = new TextField();
+        ComboBox<String> typeBox = new ComboBox<>();
+        typeBox.getItems().addAll("Electronique", "Alimentaire", "Vestimentaire");
+        typeBox.setValue("Electronique");
+
+        grid.add(new Label("Type:"), 0, 0);
+        grid.add(typeBox, 1, 0);
+        grid.add(new Label("Nom du produit:"), 0, 1);
+        grid.add(nameField, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+        ButtonType searchButtonType = new ButtonType("Rechercher", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(searchButtonType, ButtonType.CANCEL);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == searchButtonType) {
+                String name = nameField.getText();
+                String type = typeBox.getValue();
+                String tableName = "";
+
+                switch (type) {
+                    case "Electronique":
+                        tableName = "produits_electroniques";
+                        break;
+                    case "Alimentaire":
+                        tableName = "produits_alimentaires";
+                        break;
+                    case "Vestimentaire":
+                        tableName = "produits_vestimentaires";
+                        break;
+                }
+
+                try (Connection connection = DatabaseConnection.getConnection();
+                     PreparedStatement preparedStatement = connection.prepareStatement(
+                             "SELECT * FROM " + tableName + " WHERE nom LIKE ?")) {
+
+                    preparedStatement.setString(1, "%" + name + "%");
+                    ResultSet resultSet = preparedStatement.executeQuery();
+
+                    while (resultSet.next()) {
+                        int id = resultSet.getInt("id");
+                        String productName = resultSet.getString("nom");
+                        int quantity = resultSet.getInt("quantite");
+                        double price = resultSet.getDouble("prix");
+
+                        System.out.println("ID: " + id + ", Nom: " + productName + ", Quantité: " + quantity + ", Prix: " + price);
+                    }
+                } catch (SQLException e) {
+                    System.out.println("Erreur SQL : " + e.getMessage());
+                }
+                return null;
             }
+            return null;
+        });
 
-        } catch (SQLException e) {
-            System.out.println("Erreur SQL : " + e.getMessage());
-        }
+        dialog.showAndWait();
     }
 
-    private static void afficherNombreProduitParType() {
-        try (Connection connection = DatabaseConnection.getConnection();
-             PreparedStatement preparedStatement1 = connection.prepareStatement(
-                     "SELECT COUNT(*) AS total FROM produits_electroniques");
-             PreparedStatement preparedStatement2 = connection.prepareStatement(
-                     "SELECT COUNT(*) AS total FROM produits_alimentaires");
-             PreparedStatement preparedStatement3 = connection.prepareStatement(
-                     "SELECT COUNT(*) AS total FROM produits_vestimentaires")) {
 
-            ResultSet resultSet1 = preparedStatement1.executeQuery();
-            ResultSet resultSet2 = preparedStatement2.executeQuery();
-            ResultSet resultSet3 = preparedStatement3.executeQuery();
+    private void showListProductDialog() {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Lister les produits par lettre");
 
-            if (resultSet1.next() && resultSet2.next() && resultSet3.next()) {
-                int electroniqueCount = resultSet1.getInt("total");
-                int alimentaireCount = resultSet2.getInt("total");
-                int vestimentaireCount = resultSet3.getInt("total");
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
 
-                System.out.println("Nombre de produits par type :");
-                System.out.println("Alimentaire : " + alimentaireCount);
-                System.out.println("Électronique : " + electroniqueCount);
-                System.out.println("Vestimentaire : " + vestimentaireCount);
+        TextField letterField = new TextField();
+        ComboBox<String> typeBox = new ComboBox<>();
+        typeBox.getItems().addAll("Electronique", "Alimentaire", "Vestimentaire");
+        typeBox.setValue("Electronique");
+
+        grid.add(new Label("Type:"), 0, 0);
+        grid.add(typeBox, 1, 0);
+        grid.add(new Label("Lettre initiale:"), 0, 1);
+        grid.add(letterField, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+        ButtonType listButtonType = new ButtonType("Lister", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(listButtonType, ButtonType.CANCEL);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == listButtonType) {
+                String letter = letterField.getText() + "%";
+                String type = typeBox.getValue();
+                String tableName = "";
+
+                switch (type) {
+                    case "Electronique":
+                        tableName = "produits_electroniques";
+                        break;
+                    case "Alimentaire":
+                        tableName = "produits_alimentaires";
+                        break;
+                    case "Vestimentaire":
+                        tableName = "produits_vestimentaires";
+                        break;
+                }
+
+                try (Connection connection = DatabaseConnection.getConnection();
+                     PreparedStatement preparedStatement = connection.prepareStatement(
+                             "SELECT * FROM " + tableName + " WHERE nom LIKE ?")) {
+
+                    preparedStatement.setString(1, letter);
+                    ResultSet resultSet = preparedStatement.executeQuery();
+
+                    while (resultSet.next()) {
+                        int id = resultSet.getInt("id");
+                        String name = resultSet.getString("nom");
+                        int quantity = resultSet.getInt("quantite");
+                        double price = resultSet.getDouble("prix");
+
+                        System.out.println("ID: " + id + ", Nom: " + name + ", Quantité: " + quantity + ", Prix: " + price);
+                    }
+                } catch (SQLException e) {
+                    System.out.println("Erreur SQL : " + e.getMessage());
+                }
+                return null;
             }
+            return null;
+        });
 
-        } catch (SQLException e) {
-            System.out.println("Erreur SQL : " + e.getMessage());
-        }
+        dialog.showAndWait();
     }
+
+
+    private void showStockCountDialog() {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Afficher le nombre de produits en stock");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        ComboBox<String> typeBox = new ComboBox<>();
+        typeBox.getItems().addAll("Electronique", "Alimentaire", "Vestimentaire");
+        typeBox.setValue("Electronique");
+
+        grid.add(new Label("Type:"), 0, 0);
+        grid.add(typeBox, 1, 0);
+
+        dialog.getDialogPane().setContent(grid);
+        ButtonType stockButtonType = new ButtonType("Afficher", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(stockButtonType, ButtonType.CANCEL);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == stockButtonType) {
+                String type = typeBox.getValue();
+                String tableName = "";
+
+                switch (type) {
+                    case "Electronique":
+                        tableName = "produits_electroniques";
+                        break;
+                    case "Alimentaire":
+                        tableName = "produits_alimentaires";
+                        break;
+                    case "Vestimentaire":
+                        tableName = "produits_vestimentaires";
+                        break;
+                }
+
+                try (Connection connection = DatabaseConnection.getConnection();
+                     PreparedStatement preparedStatement = connection.prepareStatement(
+                             "SELECT SUM(quantite) AS total_stock FROM " + tableName)) {
+
+                    ResultSet resultSet = preparedStatement.executeQuery();
+                    if (resultSet.next()) {
+                        int totalStock = resultSet.getInt("total_stock");
+                        System.out.println("Nombre total de produits en stock dans la catégorie " + type + " : " + totalStock);
+                    }
+                } catch (SQLException e) {
+                    System.out.println("Erreur SQL : " + e.getMessage());
+                }
+                return null;
+            }
+            return null;
+        });
+
+        dialog.showAndWait();
+    }
+
+
+    private void showTypeCountDialog() {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Afficher le nombre de produits par type");
+
+        dialog.getDialogPane().setContent(new Label("Affichage du nombre de produits par type dans la console."));
+        ButtonType typeButtonType = new ButtonType("Afficher", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(typeButtonType, ButtonType.CANCEL);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == typeButtonType) {
+                try (Connection connection = DatabaseConnection.getConnection();
+                     PreparedStatement preparedStatement = connection.prepareStatement(
+                             "SELECT 'Vestimentaire' AS type, COUNT(*) AS total FROM produits_vestimentaires " +
+                                     "UNION ALL " +
+                                     "SELECT 'Alimentaire' AS type, COUNT(*) AS total FROM produits_alimentaires " +
+                                     "UNION ALL " +
+                                     "SELECT 'Electronique' AS type, COUNT(*) AS total FROM produits_electroniques")) {
+
+                    ResultSet resultSet = preparedStatement.executeQuery();
+                    while (resultSet.next()) {
+                        String type = resultSet.getString("type");
+                        int total = resultSet.getInt("total");
+                        System.out.println("Type: " + type + ", Nombre de produits : " + total);
+                    }
+                } catch (SQLException e) {
+                    System.out.println("Erreur SQL : " + e.getMessage());
+                }
+                return null;
+            }
+            return null;
+        });
+
+        dialog.showAndWait();
+    }
+
 }
